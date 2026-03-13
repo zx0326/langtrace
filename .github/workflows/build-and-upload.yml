@@ -1,0 +1,30 @@
+name: Build and Package All Images
+on:
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull and save all images
+        run: |
+          # Pull dependencies
+          docker pull postgres:16.2-bookworm
+          docker pull clickhouse/clickhouse-server:24.5.1.1763-alpine
+          
+          # Build langtrace (if needed, or just pull if you prefer)
+          docker build -t langtrace-local .
+
+          # Save all to tar files
+          docker save postgres:16.2-bookworm -o postgres.tar
+          docker save clickhouse/clickhouse-server:24.5.1.1763-alpine -o clickhouse.tar
+          docker save langtrace-local:latest -o langtrace.tar
+
+          # Combine into one zip
+          zip all-images.zip *.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: langtrace-full-package
+          path: all-images.zip
