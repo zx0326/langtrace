@@ -6,13 +6,16 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Pull and save all images
         run: |
           # Pull dependencies
           docker pull postgres:16.2-bookworm
           docker pull clickhouse/clickhouse-server:24.5.1.1763-alpine
           
-          # Build langtrace (if needed, or just pull if you prefer)
+          # Build langtrace from local Dockerfile
           docker build -t langtrace-local .
 
           # Save all to tar files
