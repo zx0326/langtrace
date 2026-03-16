@@ -1,4 +1,4 @@
-name: Build and Package All Images (Split)
+name: Build and Package All Images (True Split)
 on:
   workflow_dispatch:
 
@@ -18,22 +18,24 @@ jobs:
           docker save clickhouse/clickhouse-server:24.5.1.1763-alpine -o clickhouse.tar
           docker save langtrace-local:latest -o langtrace.tar
 
-      - name: Compress and split into 100MB parts
+      - name: Compress and split into 100MB parts (as .zip segments)
         run: |
-          # 压缩并分割每个 tar
+          # 将每个镜像压缩后分割成 100MB 的 zip 分卷
           for img in postgres clickhouse langtrace; do
-            gzip "${img}.tar"
-            split -b 100M "${img}.tar.gz" "${img}-part-"
-            rm "${img}.tar.gz"  # 清理中间文件
+            echo "Splitting $img.tar..."
+            zip -s 100m "${img}.zip" "${img}.tar"
+            rm "${img}.tar"  # 清理原始 tar
           done
 
-      - name: Upload split parts as separate files (NO ZIP!)
+      - name: Upload all split zip segments
         uses: actions/upload-artifact@v4
         with:
-          name: langtrace-full-package-parts
+          name: langtrace-split-zip-parts
           path: |
-            postgres-part-*
-            clickhouse-part-*
-            langtrace-part-*
+            postgres.zip
+            postgres.z*
+            clickhouse.zip
+            clickhouse.z*
+            langtrace.zip
+            langtrace.z*
           if-no-files-found: error
-          # 关键：不启用 compression，让每个 part 独立上传
