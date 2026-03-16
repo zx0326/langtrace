@@ -1,4 +1,4 @@
-name: Build and Package All Images
+name: Build and Package All Images (Split)
 on:
   workflow_dispatch:
 
@@ -23,11 +23,21 @@ jobs:
           docker save clickhouse/clickhouse-server:24.5.1.1763-alpine -o clickhouse.tar
           docker save langtrace-local:latest -o langtrace.tar
 
-          # Combine into one zip
-          zip all-images.zip *.tar
+      - name: Split each tar into 100MB chunks and compress
+        run: |
+          # 压缩并分割每个 tar 文件（每份 ≤100MB）
+          for file in *.tar; do
+            echo "Processing $file..."
+            gzip "$file"                         
+            split -b 100M "${file}.gz" "${file%.*}-part-" 
+            rm "${file}.gz"                       # 
+          done
 
-      - name: Upload artifact
+      - name: Upload all split parts
         uses: actions/upload-artifact@v4
         with:
-          name: langtrace-full-package
-          path: all-images.zip
+          name: langtrace-full-package-split
+          path: |
+            postgres-part-*
+            clickhouse-part-*
+            langtrace-part-*
